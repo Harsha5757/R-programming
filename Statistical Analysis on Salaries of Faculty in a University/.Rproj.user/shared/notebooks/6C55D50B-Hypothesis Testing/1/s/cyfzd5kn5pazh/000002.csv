@@ -1,0 +1,5 @@
+"0","# Finding normality of sample based on discipline using ggqqplot() function from ggpubr"
+"0","ggqqplot(Salaries, x = ""salary"", facet.by = ""discipline"")"
+"2","Error in ggqqplot(Salaries, x = ""salary"", facet.by = ""discipline"") : 
+  could not find function ""ggqqplot""
+"

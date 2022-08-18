@@ -1,0 +1,3 @@
+"0","best.sum<- summary(best)"
+"0","out.table <- data.frame(best.sum$outmat, best.sum$adjr2, best.sum$rss, best.sum$cp, best.sum$bic)"
+"0","out.table"

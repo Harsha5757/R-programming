@@ -1,0 +1,5 @@
+"0","#vif is From Cars Package  check"
+"0","vif(chosen.lm) %>% knitr::kable() "
+"2","Error in vif(chosen.lm) %>% knitr::kable() : 
+  could not find function ""%>%""
+"

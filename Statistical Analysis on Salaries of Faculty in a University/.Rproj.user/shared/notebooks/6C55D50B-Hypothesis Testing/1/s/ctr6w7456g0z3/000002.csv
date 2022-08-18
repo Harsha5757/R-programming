@@ -1,0 +1,2 @@
+"0","best <- regsubsets(salary~., data=Salaries)"
+"0","plot(best, scale=""adjr2"", main=""Best-fit: Adjusted R square"")"

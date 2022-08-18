@@ -1,0 +1,188 @@
+---
+title: "Shiny Project"
+author: "Koganti, Venkata Rama Sri Harsha"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+runtime: shiny
+---
+
+# Loading Packages
+
+```{r}
+library(tidyverse)
+library(carData)
+```
+
+
+
+Inputs {.sidebar}
+-----------------------------
+
+### __Dot_Graph_Inputs__
+
+```{r}
+# X-Axis Veriable
+selectInput(inputId = "Xvariable",
+            label = "X-Axis_Variable",
+            choices = c("salary", "yrs.service", "yrs.since.phd"))
+
+# Y-Axis Veriable
+selectInput(inputId = "Yvariable",
+            label = "Y-Axis_Variable",
+            choices = c("yrs.service", "salary", "yrs.since.phd"))
+
+# Categorical Variable Selection
+selectInput(inputId = "Categoricalvariable",
+            label = "Categorical_Variable",
+            choices = c("rank", "discipline", "sex"))
+
+# Point_Size
+sliderInput(inputId = "Pointsize",
+            label = "select Point Size",
+            min = 1, max =10, value =2)
+```
+
+
+### __Box_Plot_Inputs__
+
+```{r}
+# CheckBox for Horizontal vs Vertical
+checkboxInput(inputId = "Horizontal",
+              label = "Check for Horizontal Boxplot",
+              value = TRUE)
+
+#Numerical Variable for BoxPlot
+selectInput(inputId = "NumVariable",
+            label = "Numerical_Variable",
+            choices = c("salary", "yrs.service", "yrs.since.phd"))
+
+
+
+# Categorical Variable Selection
+selectInput(inputId = "CategoricalBoxvariable",
+            label = "Categorical_BoxPlot_Variable",
+            choices = c("rank", "discipline", "sex"))
+
+
+# Color
+selectInput(inputId = "BoxplotColor",
+            label = "Slect BoxPlotColor",
+            choices = colors())
+```
+
+
+### __Histogram_Inputs__
+
+```{r}
+# Variable for Histogram
+selectInput(inputId = "HistVariable",
+            label = "Histogram_Variable",
+            choices = c("salary", "yrs.service", "yrs.since.phd"))
+
+# Histogram_Bin_Size
+sliderInput(inputId = "Binsize",
+            label = "select bin size",
+            min = 5, max =50, value =25 )
+
+# Histogram Color Options
+selectInput(inputId = "HistColor",
+            label = "Slect a Color for Histogram",
+            choices = colors())
+
+
+```
+
+
+### __Bar_Graph_Inputs__
+
+```{r}
+# Categorical Variable Selection
+selectInput(inputId = "CategoricalBarvariable",
+            label = "Categorical_BarGraph_Variable",
+            choices = c("rank", "discipline", "sex"))
+
+
+```
+
+
+
+
+Row {data-height=100}
+-------------------------------------------------
+### __description__
+
+```{r}
+t <- "The 2008-09 nine-month academic salary for Assistant Professors, Associate Professors and Professors in a college in the U.S. The data were collected as part of the on-going effort of the college's administration to monitor salary differences between male and female faculty members."
+
+renderText(t)
+
+
+```
+
+Row {.tabset}
+-------------------------------------------------
+
+### __Graph(Point)__
+
+```{r}
+renderPlot(ggplot(Salaries, 
+                  aes_string(x = input$Xvariable, 
+                             y = input$Yvariable, 
+                             color = input$Categoricalvariable))+
+           geom_point(size = input$Pointsize))
+```
+
+### __Box_Plot__
+```{r}
+# Doing in base function of plotting
+formulaText <- reactive({paste(input$NumVariable,"~", input$CategoricalBoxvariable)})
+
+
+# Create a BoxPlot From our Inputs
+
+renderPlot(boxplot(as.formula(formulaText()),
+        data = Salaries,
+        horizontal =input$Horizontal,
+        col = input$BoxplotColor))
+
+```
+
+
+### __Histogram__
+
+```{r}
+renderPlot(ggplot(Salaries, 
+                  mapping = aes_string(x = input$HistVariable))+
+             geom_histogram(bins =input$Binsize,
+                            fill = input$HistColor,
+                            col = "Blue"))
+
+```
+
+
+### __BarGraph__
+
+```{r}
+renderPlot(ggplot(Salaries, 
+                  mapping = aes_string(x = input$CategoricalBarvariable, 
+                  fill = input$CategoricalBarvariable))+
+          geom_bar(col = "Blue"))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,1 @@
+{"frames":[],"message":"Error in ggqqplot(Salaries, x = \"salary\", facet.by = \"discipline\") : \n  could not find function \"ggqqplot\"\n"}

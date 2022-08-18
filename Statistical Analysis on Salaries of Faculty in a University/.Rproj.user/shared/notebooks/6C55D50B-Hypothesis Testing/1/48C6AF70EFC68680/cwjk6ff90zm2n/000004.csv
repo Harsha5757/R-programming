@@ -1,0 +1,7 @@
+"0","plot1 <- ggplot(Salaries, aes(x = salary, y = yrs_service))+geom_point(color = ""red"")"
+"0","plot2 <- ggplot(Salaries, aes(x = salary, y = sex, color = sex))+geom_point()"
+"0","plot3 <- ggplot(Salaries, aes(x = salary, y = rank))+geom_point(color = ""blue"")"
+"0","plot4 <- ggplot(Salaries, aes(x = salary, y = discipline))+geom_point(color = ""violet"")"
+"0",""
+"0",""
+"0","plot1"

@@ -1,0 +1,3 @@
+"0","SalariesM <- Salaries %>% filter(sex == ""Male"" )"
+"0",""
+"0","SalariesF <- Salaries %>% filter(sex == ""Female"")"

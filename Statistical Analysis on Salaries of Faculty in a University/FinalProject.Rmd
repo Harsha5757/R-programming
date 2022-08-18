@@ -1,0 +1,817 @@
+---
+title: "FinalProject"
+author: "Koganti, Venkata Rama Sri Harsha"
+date: "4/5/2022"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+    numbr_sections: true
+    theme: journal
+    code_download: true
+    code_folding: hide
+---
+<center>
+![Salaries Info.](Salary.png)
+</center>
+
+# Abstract
+
+The Purpose of this project is to determine weather there is a difference in salary with respect to gender, discipline of faculty, respectively. It is being evaluated by using __two paired hypothesis t_test__. And, we found that there is difference in salaries of faculty based on previously mentioned categorical variables.The hypothesis test stabilizes the inclusion of categorical variables,like, discipline and gender in multi linear regression formulation for salary.Finally, using other variables, like, years_service and rank I made an equation to predict salaries.
+
+
+
+
+# Introduction
+
+This data was collected in 2008-2009 academic year. This data includes salaries of Assistant Professors, Associate Professors and Professors in a college in the U.S. 
+
+
+__Questions Of Interest__:
+
+* Are there any gender inequality present while considering the salary as the criteria?
+
+* Are the educational systems giving more priority to Applied departments than than the theoretical one?
+
+* Can we determine the salary of a faculty by constructing a multi linear regression equation?
+
+* Are all of the variables necessary to construct the linear regression equation for salaries?
+
+* are there any confounding variables, which the data frame does not have, that can be required to determine the salaries of the faculty using linear regression in a more meaningful way?
+
+
+__Methods to Answer the questions of interest__:
+
+* Doing __paired t_test__ to find weather there is difference in salaries when it comes to categorical variable, like, sex, discipline.
+
+* By using __lm__ function I will find the multiple linear regression equation
+
+* By using __BestFit__ I will find the best model for which __Adjusted_R^2__ will be the highest.
+
+* I will do the analysis on Linear regression equation based on the __Adjusted_R^2__. This will allow me to thing about confounding factors, that might have a significant effect in calculating __salary__ using linear regression equation, if they were also collected along with the collected variables.
+
+
+__Details about the dataframe__
+
+This data frame consists of 397 observations of the following six variables:
+
+__Rank__           :    a factor with levels AssocProf AsstProf Prof
+
+__discipline__     :    a factor with levels A (“theoretical” departments) or B (“applied” departments).    
+
+__yrs_since_phd__  :    years since PhD.
+
+__yrs_service__    :    years of service.
+
+__sex__            :    a factor with levels Female Male
+
+__salary__         :    nine-month salary, in dollars.
+
+
+
+# Required Packages
+
+* __ggpubr__                to draw ggqqplots through which we can find the normality of sample data set
+* __tidyverse__             For data wrangling, piping, datavisulization.
+* __rstatix__              Pipe Friendliy R-Functions for statistical analyses.
+* __gridExtra__             For arranging the plots
+* __car__                  A companion to applied regression
+* __leaps__                 For selecting Regression Model
+* __moderndive__            Datasets and wrapper functions for tidyverse-friendly introductory linear regression
+* __DT__                    For Interactive data sets
+* __prettydoc__             For Rmarkdown themes
+
+```{r, message = FALSE, warning = FALSE}
+library(ggpubr)     # to draw ggqqplots through which we can find the normality of sample data set
+library(tidyverse)  # For data wrangling, piping, datavisulization.
+library(qqplotr)
+library(rstatix)    # Pipe Friendliy R-Functions for statistical analyses.
+library(gridExtra)  # For arranging the plots
+library(car)        # for durbin watson test 
+library(leaps)      # For selecting Regression Model
+library(moderndive) #Datasets and wrapper functions for tidyverse-friendly introductory linear regression
+library(DT)         # For Interactive data sets
+library(prettydoc)  # For Rmarkdown themes
+```
+
+
+
+
+# Exploring The DataSet
+
+```{r, message = FALSE, warning=FALSE}
+# reading data from csv file
+# cleaning the data usinf clean_names() function from janitor package
+Salaries <- read_csv("Salaries.csv") %>% janitor::clean_names() 
+# Printing Interactive datatable from DT package.
+datatable(head(Salaries, 100),
+          rownames = FALSE,
+          extensions = 'Scroller',
+          filter = 'bottom')
+
+```
+
+# Cheking Correlation
+
+* Checking Correlation between __yrs_sice_phd__, __yrs_service__.
+
+```{r}
+# To find correlation
+Correlation1 <- cor(Salaries[,c(4, 5)]) 
+
+# Printing the results of correlation table in a nice form using kable() function from knitr package
+
+Correlation1 %>% knitr::kable()
+
+
+
+
+```
+
+# Data Cleaning
+
+* From the above data, we can see that yrs_since_phd, yrs_service are correlated to a high extent. Therefore, I am going to remove yrs_since_phd from our data using select function from tidyverse package.
+
+```{r}
+# For selecting required data variables using select() function from tidyverse package
+Salaries <- Salaries %>%
+  select(rank, discipline, yrs_service, sex, salary) 
+
+# Printing Data Table in an  interactive manner using datatable function from "DT" package.
+datatable(head(Salaries, 20),
+          rownames = FALSE,
+          extensions = 'Scroller',
+          filter = 'bottom')
+
+
+```
+
+
+
+# <span style = "color: red;"> Is there any difference in the mean salaries of theoretical(A), applied(B) departments?</span>
+
+
+## __Hypothesis Test Formulation__
+
+$$ H_0: \mu_1 = \mu_2 $$
+$$ H_A: \mu_1 \ne \mu_2 $$
+
+* __NOTE:__
+  * MU1 is the Population mean salary of discipline A(__Theoretical__)
+  * MU2 is the Population mean salary of discipline B(__Applied__)
+  
+## Assumptions:
+
+* Random Sampling is done while collecting the sample
+  
+  
+## Data Management For Hypothesis Testing:{.tabset}
+
+* Creating datasets based on discipline using filter function from Tidyverse package.
+```{r}
+# Creating datasets based on discipline using filter function from Tidyverse package. 
+SalariesA <- Salaries %>% filter(discipline == "A" )
+SalariesB <- Salaries %>% filter(discipline == "B")
+
+```
+### Salaries based on discipline A
+```{r}
+head(SalariesA, 10)%>% knitr::kable()
+```
+### Salaries based on discipline B
+```{r}
+head(SalariesB, 10)%>% knitr::kable()
+```
+
+
+## Descriptive Statastics
+
+```{r}
+# Finding Means and Standard Deviations based on discipline using group_by(), summarise functions from Tidyverse package
+Salaries %>%
+  group_by(discipline) %>%
+  summarise(Mean_Salary = mean(salary, na.rm = TRUE),
+            Sd_Salary = sd(salary, na.rm = TRUE),
+            Count = n()
+            )%>% knitr::kable()
+```
+## Tests For Normality
+
+### Finding the shape of __Histogram__ and outliers from __BoxPlot__
+
+```{r, fig.show = "hold", out.width = "50%"}
+# Data Visualization using ggplot() from tidyverse package
+
+# Histogram
+hist1A <- SalariesA %>%
+  ggplot(mapping = aes(x = salary, fill = discipline))+
+  geom_histogram(binwidth = 25000, alpha = 0.8)+
+  labs(title = "Histogram of Salary", x = "Salary_A_Discipline")
+
+hist1B <- SalariesB %>%
+  ggplot(mapping = aes(x = salary, fill = discipline))+
+  geom_histogram(binwidth = 25000, alpha = 0.8)+
+  labs(title = "Histogram of Salary",  x = "Salary_B_Discipline")
+
+
+#BoxPlot
+bp1 <-  Salaries %>%
+  ggplot(mapping = aes(x = salary, fill = discipline ))+
+  geom_boxplot(outlier.color = "#F56600")+
+  labs(title = "BoxPlot of Salary based on Discipline")
+
+hist1A
+hist1B
+bp1
+
+
+
+```
+
+### Shapiro Wilk Test by discipline
+```{r}
+# This test is used to gain evidence that the sampling data is not normally distributed
+# Shapiro_test() function is from rstatix package.
+
+st1 <- Salaries %>%
+  group_by(discipline) %>%
+  shapiro_test(salary)
+st1
+```
+
+### qqPlot for Normality
+
+```{r}
+# Finding normality of sample based on discipline using ggqqplot() function from ggpubr
+ggqqplot(Salaries, x = "salary", facet.by = "discipline")
+```
+
+## __Inference__ from Descriptive Statastics, Normality tests:
+
+* From  __Descriptive Statastics__ we can see the mean sample salary of discipline__B__ is higher than that of discipline__A__.
+
+* In __shapiro_test__ P_Value is less than 0.05. Therfore, we can say that the sample is not normally distributed. 
+
+* From __qqplot__, we came to know that that the data is not  normally distributed in a perfect manner.
+
+* From __BoxPlot__, we can observe that there are some outliers.
+
+* From the __histogram Plot__, we can observe that both the disciplines distributions are right skewed
+
+* However, since the number of data points are high we can consider the sampling mean distribution as normal.
+
+
+## Two Pair T_Test 
+```{r}
+
+# Two pair hypothesis t_test using t_test() function from rstatix package.
+test1 <- Salaries %>%
+  t_test(salary ~ discipline) %>%
+  add_significance()
+test1
+
+```
+## Summary of the Hypothesis Test to find weather there is actual difference between the mean salaries of individuals based on descipline:
+
+* A two-sample t-test was computed to determine whether the population mean salary of __TheoreticalDepartment(A)__ differs from the Population mean salary of __AppliedDepartment(B).
+
+* Since the P-Value for the two sample T-test is __<0.05__ we are able to reject the hypothesis. And, we can state that __Applied deparment__ have high salary than that of __theoretical Department__.
+
+
+# <span style = "color: red;"> Is there any difference in the mean salaries based on the gender?</span>
+
+## Hypothesis Test:
+
+$$ H_0: \mu_1 = \mu_2 $$
+$$ H_A: \mu_1 \ne \mu_2 $$
+
+
+
+
+* __NOTE:__
+  * MU1 is the Population mean salary of female gender
+  * MU2 is the Population mean salary of male gender
+
+
+## Assumptions:
+
+* Random Sampling is done while collecting the sample
+  
+  
+## Data Management For Hypothesis Testing:{.tabset}
+
+```{r}
+# Creating datasets based on gender using filter function from Tidyverse package. 
+SalariesM <- Salaries %>% filter(sex == "Male" )
+SalariesF <- Salaries %>% filter(sex == "Female")
+```
+
+### Salaries based on Female gender
+```{r}
+head(SalariesF, 10)%>% knitr::kable()
+```
+### Salaries based on Male gender
+```{r}
+head(SalariesM, 10)%>% knitr::kable()
+```
+
+
+## Descriptive Statastics
+
+```{r}
+# Finding Means and Standard Deviations based on gender using group_by(), summarise() functions from Tidyverse package
+Salaries %>%
+  group_by(sex) %>%
+  summarise(Mean_Salary = mean(salary, na.rm = TRUE),
+            Sd_Salary = sd(salary, na.rm = TRUE),
+            Count = n()
+            )
+```
+
+## Tests For Normality 
+
+### Finding the shape of __Histogram__ and outliers from __BoxPlot__
+
+```{r, fig.show = "hold", out.width = "50%"}
+
+# Data Visualization Using ggplot from tidyverse package
+
+
+# Histogram
+hist2A <- SalariesF %>%
+  ggplot(mapping = aes(x = salary, fill = sex))+
+  geom_histogram(binwidth=25000, alpha = 0.8)+
+  labs(title = "Histogram of Salary", x= "Salary_Female_Gender")
+
+
+hist2B <- SalariesM %>%
+  ggplot(mapping = aes(x = salary, fill = sex))+
+  geom_histogram(binwidth=25000, alpha = 0.8)+
+  labs(title = "Histogram of Salary", y= "Salary_Male_Gender")
+
+# BoxPlot
+bp2 <-  Salaries %>%
+  ggplot(mapping = aes(x = salary, fill = sex))+
+  geom_boxplot(outlier.color = "#F56600")+
+  labs(title = "BoxPlot of Salary based on Gender")
+
+hist2A
+hist2B
+bp2
+
+
+```
+
+### Shapiro Wilk Test by discipline
+```{r}
+# This test is used to gain evidence that the sampling data is not normally distributed
+# Using shapiro_test() function from rstatix package
+st2 <- Salaries %>%
+  group_by(sex) %>%
+  shapiro_test(salary)
+st2
+```
+
+### qqPlot for Normality
+
+```{r}
+# Normality check using ggqqplot from ggpubr package
+ggqqplot(Salaries, x = "salary", facet.by = "sex")
+```
+
+## __Inference__
+
+* From  __Descriptive Statastics__ we can see the mean sample salary of __Male__ gender is higher than that of __Female__ gender.
+
+* In shapiro_test P_Value is less than 0.05. Therfore, we can say that the sample is not normally distributed. 
+
+* From qqplot, we came to know that that the data is not  normally distributed in a perfect manner.
+
+* From BoxPlot, we can observe that there are some outliers
+
+* From the histogram Plot, we can observe that the distributions are right skewed
+
+* However, since the number of data points are high for both male, female gender we can consider the sampling mean distribution as normal.
+
+## Performing Two Pair T_Test:
+
+```{r}
+# Two pair hypothesis t_test using t_test() function from rstatix package.
+test2 <- Salaries %>%
+  t_test(salary ~ sex) %>%
+  add_significance()
+test2
+
+```
+
+## Summary of the Hypothesis Test to find weather there is actual difference between the mean salaries of individuals based on Gender:
+
+
+* A two-sample t-test was computed to determine whether the population mean salary of __female__ gender differs from the Population mean salary of __male__ gender.
+
+* Since the P-Value for the two sample T-test is __<0.05__ we are able to reject the hypothesis. And, we can state that __female gender__ have low mean salary than __male gender__.
+
+
+
+# Inference from both the hypothesis testings
+
+* We came to know that  mean salaries are different for  categorical  variables, discipline and gender, respectively. Therefore, if we want to build a  multiple linear regression model both of these categorical variables plays an important roll in estimating __salaries__, which is going to be our response variable.
+
+
+
+# <span style = "color: red;">Linear regession for __salary__</span>
+
+## Data Set for the first linear regression
+
+```{r}
+# Interactive table using datatable() function from DT package. 
+
+datatable(head(Salaries, 20),
+          rownames = FALSE,
+          extensions = 'Scroller',
+          filter = 'bottom')
+```
+
+## Response Variable Vs Explonatory Variables Graphs:
+
+```{r, fig.show = 'hold', out.width = "50%"}
+
+# Data Visualization based on response variable(salary) vs explanatory variable(yrs_service, sex, rank, discipline) using ggplot() function from tidyverse package/suit
+
+plot1 <- ggplot(Salaries, aes(x = salary, y = yrs_service))+geom_point(color = "red") + 
+  labs(title = "Salary vs Years of service", x = "Salary($)", y = "Years of service")
+
+plot2 <- ggplot(Salaries, aes(x = salary, y = sex, fill= sex))+geom_boxplot()+
+  labs(title = "salary vs gender", x = "Salary($)", y = "Gender")
+
+plot3 <- ggplot(Salaries, aes(x = salary, y = rank, fill = rank))+geom_boxplot()+
+  labs(title = "Salary vs Rank ", x = "Salary($)", y = "Rank")
+
+plot4 <- ggplot(Salaries, aes(x = salary, y = discipline, fill = discipline))+geom_boxplot()+
+  labs(title = "Salary vs Discipline", x = "Salary($)", y = "Discipline")
+
+
+plot1
+plot2
+plot3
+plot4
+
+
+```
+
+##  Inference from the graphs:
+
+* From __Salary vs Years of Service__ graph, we can not able specify that there is exact linear relation ship between those two variables it is because as the number of years of service increases more scattering of salary is present.
+
+* From __ Salary vs Gender__ boxplot graph, we can see that the median salary of male is slightly greate than that of female.
+
+* From __Salary vs Rank__ boxplot graph, we can observe that the median salary of Professor rank holder is high, then the Associate Professor, and lastly the Asst Professor. 
+
+* From __Salary vs Discipline__ boxplot graph, we can observe that the median salary of discipline B(Applied) is greater than that of discipline A(Theoretical).
+
+* From these graphs we can say that __years_service__ will not have a great contribution in finding salaries of faculty using linear regression model when compared to other variables it is because as the number of years of service increases more scattering of salary is present. 
+
+
+## Data Transformation
+
+* Converting categorical variables in to numerical variables because this conversion will help us to find correlation across explanatory variables
+
+```{r}
+# Using Case_when(), mutate() functions in tidyverse package/suit we can change the values of the data which are present in dataframe/ tibble as follows
+
+# I converted the categorical variables in to numerical values to calculate the correlation among the variables.
+Salaries <- Salaries %>%
+  mutate(rank = case_when(
+    rank == "Prof"      ~ "1",
+    rank == "AssocProf" ~ "2",
+    rank == "AsstProf"  ~ "3",
+    TRUE                ~  as.character(rank)
+    ),
+    discipline = case_when(
+      discipline == "A" ~ "1",
+      discipline == "B" ~ "2",
+      TRUE              ~ as.character(discipline)
+    ),
+    sex = case_when(
+      sex == "Female" ~ "1",
+      sex == "Male"   ~ "2",
+      TRUE            ~ as.character(sex)
+    ),
+    rank =as.numeric(rank),
+    discipline = as.numeric(discipline),
+    sex = as.numeric(sex)
+    )
+
+# Interactive data using datatable() function from DT package
+datatable(head(Salaries, 20),
+          rownames = FALSE,
+          extensions = 'Scroller',
+          filter = 'bottom')
+
+```
+
+
+
+## Model Selection {.tabset}
+
+### Forward Selection
+
+```{r}
+# creating a linear regression equation using lm() function from base R
+lm <- lm(salary~., data = Salaries)
+
+# Model selection using regsubset() function from leaps package
+forward <- regsubsets(salary~., data = Salaries, method = "forward")
+
+# summary is from base R package. Produces result summaries of various model fittings
+summary(forward)
+
+```
+
+### ForwardSelection Adjusted R^2 Plot
+
+```{r}
+plot(forward, scale="adjr2", main="Forward: Adjusted R Square")
+```
+
+* From this plot, we can observe that the adjusted R^2 is high when we take rank, discipline, and sex as the explanatory variables for creating linear regression eqaution 
+
+
+
+
+### Backward Elimination
+
+
+```{r}
+# Model selection using regsubset() function from leaps package
+backward <- regsubsets(salary~., data = Salaries, method = "backward")
+
+# summary is from base R package. Produces result summaries of various model fittings
+summary(backward)
+
+
+```
+
+###  BackwardElimination Adjusted R^2 Plot
+
+```{r}
+
+plot(backward, scale = "adjr2", main = "BackWard Adj R^2")
+
+```
+* From this plot, we can observe that the adjusted R^2 is high when we take rank, discipline, and sex as the explanatory variables for creating linear regression equation 
+
+### Sequential Replacement
+
+```{r}
+# Model selection using regsubset() function from leaps package
+seq <- regsubsets(salary~., data = Salaries, method = "seqrep")
+
+# summary is from base R package. Produces result summaries of various model fittings
+summary(seq)
+
+```
+
+
+
+
+
+### Sequential Replacement Adjusted R^2 Plot
+
+```{r}
+plot(seq, scale = "adjr2", main = "SeqRep Adj R^2")
+
+```
+* From this plot, we can observe that the adjusted R^2 is high when we take rank, discipline, and sex as the explanatory variables for creating linear regression eqaution 
+
+
+### Bet_fit
+```{r,fig.show = 'hold', out.width = "50%"}
+# Model selection using regsubset() function from leaps package
+best <- regsubsets(salary~., data=Salaries)
+
+plot(best, scale="adjr2", main="Best-fit: Adjusted R square")
+plot(best, scale="Cp", main="Best-fit: Cp")
+plot(best, scale="bic", main="Best-fit: BIC")
+```
+
+## Summary of BestFit
+```{r}
+# summary is from base R package. Produces result summaries of various model fittings
+best.sum<- summary(best)
+
+# Creating a data frame that can shows the best fit by model.
+out.table <- data.frame(best.sum$outmat, best.sum$adjr2, best.sum$rss, best.sum$cp, best.sum$bic)
+out.table
+```
+* Model Selection
+
+I choose model 3 - with rank, discipline, sex . This model has the largest adjusted r^2 value, one of smallest values for sum of rss,one of the smallest Cp value, and one of the smallest BIC values. In addition, this is the model that was chosen by Forward selection, Backward elimination  and Sequential Replacement methods.
+
+## Doing Multiple Regression with the selected model __Three__
+
+```{r}
+# Creating a linear regression equation based on the chosen model three
+chosen.lm <- lm(salary~rank+discipline+sex, data = Salaries)
+
+# get_regression_table is from the moderndive package
+chosen.table <- get_regression_table(chosen.lm, digits = 15)
+
+# prints the intercept, and coefficients of explanatory variables of linear regression equation.
+chosen.lm 
+```
+
+
+## Check assumptions
+
+* Assumption 1: the probability distribution of the random errors (ϵ) has a mean of 0.
+
+* Assumption 2: the probability distribution of the random errors (ϵ) has a constant variance
+
+* Assumption 3: the probability distribution of the random errors (ϵ) follows a normal distribution
+
+* Assumption 4: the random errors (ϵ) are independent
+
+* Assumption 5: Little to no multicollinearity
+
+## __Assumption 1__ : errors have a mean of zero - assume it is true
+
+
+## __Assumption 2__: errors have a constant variance
+```{r}
+# Checking weather the residuals(errors) have constant variance or not by using residuals vs fitted plot.
+plot(chosen.lm, 1, col="blue", pch=19)
+```
+
+
+
+* From the __Residuals vs Fitted__ graph, we can see that the residuals are following some pattern along the fitted values, therefore, we can interpret that the variance of residuals are not constant. 
+
+
+```{r}
+#NCV TEST is a hypothesis test to find weather residual's variances are constant or not
+NCV <- ncvTest(chosen.lm)
+NCV
+
+```
+
+* Since the P-Value(~ 0 ) is __< 0.05__ we are able reject the null hypothesis. Therefore, There is sufficient evidence to suggest that there is not constant variance for the residuals of linear regression model.
+
+## __Assumption 3__: errors are normally distributed - The normal probability plot shows a linear pattern.
+
+```{r}
+# ggqqplot is from ggpubr package to test the normality of residuals.
+ggqqplot(residuals(chosen.lm))
+```
+
+* __Note:__ from the qqplot, we see that error (residual) distribution is slightly right skewed.
+
+
+## __Assumption 4__: Random errors are independent (no autocorrelation)
+
+  * One way to test this is the Durbin-Watson d test. Durbin-Watson’s d test tests the null hypothesis that the residuals are not linearly auto-correlated. While "d" can assume values between 0 and 4, values around 2 indicate no autocorrelation. As a rule of thumb values of 1.5 < d < 2.5 show that there is no auto-correlation in the data. 
+  
+```{r}
+# Durbin Watson test for independence(No AutoCorrelation)
+
+# dwt() function is from car package
+dwt <- durbinWatsonTest(chosen.lm)
+dwt
+
+```
+
+*  the Durbin Watson test has a p-value greater than any reasonable alpha level(0.05). There is sufficient evidence to suggest that there is no autocorrelation.
+
+## __Assumption 5:__ no multicollinearity
+
+```{r}
+# In order to have correlation matrix, we need the categorical data must be in numbers
+COR <- cor(Salaries[,c(1, 2, 4, 5)])
+COR %>% knitr::kable()
+
+```
+* __Note:__ From above table, we can say that the explanatory variables are not correlated because none of them have the correlation > 0.8 or < -0.8.
+
+### Using the VIF Test also we can check __Multicollinearity__
+```{r}
+#vif is From Cars Package  check
+vif(chosen.lm) %>% knitr::kable() 
+```
+
+
+* __Note:__ From VIF test we can observe that the VIF values of Explanatory variables are not greater than 5. Therefore, this test is not indicating any sort of multicollinearity.
+
+
+## Model Evaluation
+
+```{r}
+# get_regression_summaries() is from moderndive package used to print summary statastics for lm() regression in a clean format
+Salaries.sum <-  get_regression_summaries(chosen.lm, digits=20)
+Salaries.sum %>% knitr::kable()
+
+```
+
+* For our example, the p-value is 0, this is smaller than any reasonable significant alpha level. There is sufficient evidence to suggest that the overall model using rank, discipline, and sex to predict salary explains a significant amount of the variation.
+
+
+
+## Evaluation of the usefulness of the Model
+
+```{r}
+#get_regression_table is from the moderndive package, which is used in creating chosen.table.
+
+# this table gives the statastic summary of the regression coefficients and intercepts.
+chosen.table %>% knitr::kable()
+```
+
+* Except for the explainatory variable, sex,all the __P-values are <= 0.05__. Since the majority of explainatory varibles have less p value, we can conclude that there is enough evidence that the linear model is useful in predicting the price.
+
+
+
+## Summary of linear regression: 
+
+1. For our model, the adj_R^2 value is 0.4462, which means that 44.62 % of sample variation in salary of faculty can be explained by explanatory variables that we have taken in our model
+
+   * The Value of the adj_R^2 is less because of the following reasons:
+   
+      a. We don't have any information regarding the research activity of the faculty
+      b. No information regarding research study effectiveness, number of researches done which definitely have a great impact on the salaries that the faculty get.
+      c. We must also have the information of academic effectiveness of faculty which is extracted from the students, who had attended lectures of that faculty for a particular semester, feedback, and this will also be having a great impact on our response variable, which is __salary__.
+      
+2. If we had had the above Mentioned information, our adj_R^2 value would have been closure to 1
+    
+3. The Value of __standard deviation(sigma)__ is __22885.65__, which is comparatively a lot smaller than the response variable __salary__. Therefore, it is __practically useful__.
+
+
+# Using Our Created Model for Prediction:
+
+* __Regression_Equation__ :
+   * <span style = "color: blue;">__salary__ = 120578.594 - 25035.764* __Rank__ + 13605.75* __discipline__ +  5069.825* __sex__</span>
+   
+   
+* Predicting salary for rank = "Prof", sex = "Male", discipline = "A"
+
+```{r}
+# Creating a dataframe
+new <- data.frame(rank = 1, sex = 2, discipline = 1)
+
+#predict is a generic function for predictions from the results of various model fitting functions, which is from stats package
+prediction <- predict(chosen.lm, newdata = new, interval = "confidence")
+prediction %>% knitr::kable()
+```
+
+* We are 95% confident that the values are in the given above range
+
+# References
+
+Fox J. and Weisberg, S. (2019) An R Companion to Applied Regression, Third Edition, Sage.
+
+
+# About MySelf
+
+<center>
+![](SriHarsha.jpeg){width=90}
+</center>
+
+
+* My name is Koganti, Venkata Rama Sri Harsha. I am a full time graduate student in Industrial Engineering at Clemson University. I have done my under graduation in Mechanical Engineering back in my home country India at Mahindra Ecole Centrale, an university which is established under the collaboration of Mahindra and Mahindra(AutoMobile Company) and Ecole Centrale of Paris. I am Interested in systems modeling, which is a sub branch of Industrial engineering where we need to create process flow for different systems in a logical manner by using Arena Sofware.
+
+
+
+
+# Apendix
+
+* Please click on the `code` button towards your right to see the overall code
+```{r ref.label=knitr::all_labels(), echo = T, eval = F}
+
+```
+
+
+
+
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+
+
+

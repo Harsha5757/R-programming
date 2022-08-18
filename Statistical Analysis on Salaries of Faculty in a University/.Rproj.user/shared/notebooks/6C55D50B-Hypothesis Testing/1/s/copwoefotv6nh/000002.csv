@@ -1,0 +1,5 @@
+"0","# Two pair hypothesis t_test using t_test() function from rstatix package."
+"0","test2 <- Salaries %>%"
+"0","  t_test(salary ~ sex) %>%"
+"0","  add_significance()"
+"0","test2"
